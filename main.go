@@ -7,7 +7,7 @@ import (
 	"github.com/allexandrecardos/dck/cmd"
 )
 
-var version = "dev"
+// var version = "dev"
 
 func main() {
 	if err := cmd.Execute(); err != nil {

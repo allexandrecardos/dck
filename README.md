@@ -18,6 +18,14 @@ Se o diretório padrão não tiver permissão, o instalador usa `%USERPROFILE%\dck` 
 
 ### Linux
 
+Instalação com `curl`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.sh | sh
+```
+
+Ou rodando o script localmente:
+
 ```bash
 # Baixar e instalar (releases)
 ./install/install.sh
@@ -29,7 +37,7 @@ dck version
 Você pode sobrescrever o destino com `DCK_INSTALL_DIR`:
 
 ```bash
-DCK_INSTALL_DIR=$HOME/.local/bin ./install/install.sh
+DCK_INSTALL_DIR=$HOME/.local/bin curl -fsSL https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.sh | sh
 ```
 
 ## Atualização

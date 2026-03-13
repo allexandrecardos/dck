@@ -7,31 +7,35 @@
 ### Windows
 
 ```powershell
-# Baixar e instalar (releases)
-.\install\install.ps1
+# Instalar (última versão)
+irm https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.ps1 | iex
 
 # Teste
 dck version
+```
+
+Para instalar uma versão específica:
+
+```powershell
+$env:DCK_VERSION="v0.1.0"; irm https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.ps1 | iex
 ```
 
 Se o diretório padrão não tiver permissão, o instalador usa `%USERPROFILE%\dck` e adiciona ao PATH do usuário.
 
 ### Linux
 
-Instalação com `curl`:
-
 ```bash
+# Instalar (última versão)
 curl -fsSL https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.sh | sh
-```
-
-Ou rodando o script localmente:
-
-```bash
-# Baixar e instalar (releases)
-./install/install.sh
 
 # Teste
 dck version
+```
+
+Para instalar uma versão específica:
+
+```bash
+DCK_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/allexandrecardos/dck/main/install/install.sh | sh
 ```
 
 Você pode sobrescrever o destino com `DCK_INSTALL_DIR`:

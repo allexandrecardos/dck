@@ -1,12 +1,27 @@
-﻿param(
+param(
   [string]$Repo = "allexandrecardos/dck",
-  [string]$InstallDir = "$env:ProgramFiles\dck"
+  [string]$InstallDir = "$env:ProgramFiles\dck",
+  [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
 
-$asset = "dck_windows_amd64.exe"
-$url = "https://github.com/$Repo/releases/latest/download/$asset"
+if ([string]::IsNullOrWhiteSpace($Version)) {
+  $Version = $env:DCK_VERSION
+}
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+  try {
+    $release = Invoke-RestMethod -Headers @{ "User-Agent" = "dck-installer" } -Uri "https://api.github.com/repos/$Repo/releases/latest"
+    $Version = $release.tag_name
+  } catch {
+    Write-Host "[ERROR] Failed to resolve latest version. Use -Version vX.Y.Z or set DCK_VERSION" -ForegroundColor Red
+    throw
+  }
+}
+
+$asset = "dck_${Version}_windows_amd64.exe"
+$url = "https://github.com/$Repo/releases/download/$Version/$asset"
 
 Write-Host "[INFO] Downloading $url" -ForegroundColor Cyan
 try {

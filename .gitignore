@@ -1,0 +1,35 @@
+# Binaries
+dck.exe
+dck
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build output
+dist/
+bin/
+*.out
+*.test
+*.prof
+*.cover
+coverage.*
+
+# Tooling
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs/temp
+*.log
+tmp/
+
+# Local config
+dck-config.yml
+
+# Local docker artifacts
+docker-compose.yml
+Dockerfile

@@ -9,6 +9,8 @@ builds:
   - id: dck
     main: "."
     binary: dck
+    env:
+      - CGO_ENABLED=0
     ldflags:
       - "-X github.com/allexandrecardos/dck/cmd.version={{.Version}}"
       - "-X github.com/allexandrecardos/dck/cmd.commit={{.Commit}}"

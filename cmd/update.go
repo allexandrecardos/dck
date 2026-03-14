@@ -5,7 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -47,7 +52,15 @@ var updateCmd = &cobra.Command{
 			return nil
 		}
 
-		printUpdateStatus(latest, url)
+		if version != "dev" && !isNewerVersion(latest, version) {
+			printInfo(fmt.Sprintf("You are up to date (%s)", version))
+			return nil
+		}
+
+		if err := runSelfUpdate(ctx, latest); err != nil {
+			return err
+		}
+		printInfo(fmt.Sprintf("Updated to %s", latest))
 		return nil
 	},
 }
@@ -93,6 +106,121 @@ func fetchLatestRelease(ctx context.Context) (string, string, error) {
 	}
 
 	return tag, data.HTMLURL, nil
+}
+
+func runSelfUpdate(ctx context.Context, latest string) error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exePath, err = filepath.Abs(exePath)
+	if err != nil {
+		return err
+	}
+
+	asset, err := resolveAssetName(latest)
+	if err != nil {
+		return err
+	}
+	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repoSlug, latest, asset)
+
+	tmpFile, err := downloadToTemp(ctx, downloadURL)
+	if err != nil {
+		return err
+	}
+
+	if runtime.GOOS == "windows" {
+		if err := scheduleWindowsReplace(exePath, tmpFile); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := os.Chmod(tmpFile, 0755); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpFile, exePath); err != nil {
+		return fmt.Errorf("failed to replace binary: %w", err)
+	}
+	return nil
+}
+
+func resolveAssetName(tag string) (string, error) {
+	versionPart := normalizeVersion(tag)
+	if versionPart == "" {
+		return "", errors.New("invalid release tag")
+	}
+	versionPart = "v" + versionPart
+
+	osPart := runtime.GOOS
+	archPart := runtime.GOARCH
+
+	switch osPart {
+	case "windows":
+		if archPart != "amd64" {
+			return "", fmt.Errorf("unsupported architecture: %s/%s", osPart, archPart)
+		}
+		return fmt.Sprintf("dck_%s_windows_amd64.exe", versionPart), nil
+	case "linux":
+		if archPart != "amd64" && archPart != "arm64" {
+			return "", fmt.Errorf("unsupported architecture: %s/%s", osPart, archPart)
+		}
+		return fmt.Sprintf("dck_%s_linux_%s", versionPart, archPart), nil
+	default:
+		return "", fmt.Errorf("unsupported OS: %s", osPart)
+	}
+}
+
+func downloadToTemp(ctx context.Context, url string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "dck-cli")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("download failed: %s", resp.Status)
+	}
+
+	tmp, err := os.CreateTemp("", "dck-update-*")
+	if err != nil {
+		return "", err
+	}
+	defer tmp.Close()
+
+	if _, err := io.Copy(tmp, resp.Body); err != nil {
+		return "", err
+	}
+
+	return tmp.Name(), nil
+}
+
+func scheduleWindowsReplace(exePath, newPath string) error {
+	script, err := os.CreateTemp("", "dck-update-*.cmd")
+	if err != nil {
+		return err
+	}
+	defer script.Close()
+
+	lines := []string{
+		"@echo off",
+		"ping 127.0.0.1 -n 2 > nul",
+		fmt.Sprintf("move /y \"%s\" \"%s\"", newPath, exePath),
+		"del /f /q \"%~f0\"",
+	}
+
+	if _, err := script.WriteString(strings.Join(lines, "\r\n") + "\r\n"); err != nil {
+		return err
+	}
+
+	cmd := exec.Command("cmd", "/c", "start", "", "/b", script.Name())
+	return cmd.Start()
 }
 
 func printUpdateStatus(latest, url string) {

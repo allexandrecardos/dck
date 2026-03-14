@@ -1,0 +1,35 @@
+version: 2
+project_name: dck
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: dck
+    main: "."
+    binary: dck
+    ldflags:
+      - "-X github.com/allexandrecardos/dck/cmd.version={{.Version}}"
+      - "-X github.com/allexandrecardos/dck/cmd.commit={{.Commit}}"
+      - "-X github.com/allexandrecardos/dck/cmd.date={{.Date}}"
+    goos:
+      - windows
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - format: binary
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "SHA256SUMS"
+
+release:
+  draft: false
+  prerelease: "auto"

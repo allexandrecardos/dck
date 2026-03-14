@@ -21,6 +21,9 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Non-blocking update check before any command
+		if cmd.Name() == "update" {
+			return nil
+		}
 		checkForUpdatesSilent()
 		return nil
 	},

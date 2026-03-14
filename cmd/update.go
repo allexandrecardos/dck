@@ -139,8 +139,11 @@ func runSelfUpdate(ctx context.Context, latest string) error {
 	if err := os.Chmod(tmpFile, 0755); err != nil {
 		return err
 	}
-	if err := os.Rename(tmpFile, exePath); err != nil {
-		return fmt.Errorf("failed to replace binary: %w", err)
+	if err := replaceBinary(tmpFile, exePath); err != nil {
+		if os.IsPermission(err) {
+			return fmt.Errorf("failed to replace binary: %w (try running with elevated permissions or reinstall in a user-writable folder)", err)
+		}
+		return err
 	}
 	return nil
 }
@@ -221,6 +224,35 @@ func scheduleWindowsReplace(exePath, newPath string) error {
 
 	cmd := exec.Command("cmd", "/c", "start", "", "/b", script.Name())
 	return cmd.Start()
+}
+
+func replaceBinary(tmpPath, exePath string) error {
+	dir := filepath.Dir(exePath)
+	staged, err := os.CreateTemp(dir, "dck-update-*")
+	if err != nil {
+		return fmt.Errorf("failed to stage update: %w", err)
+	}
+	stagedPath := staged.Name()
+	defer staged.Close()
+
+	src, err := os.Open(tmpPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	if _, err := io.Copy(staged, src); err != nil {
+		return err
+	}
+	if err := staged.Chmod(0755); err != nil {
+		return err
+	}
+
+	if err := os.Rename(stagedPath, exePath); err != nil {
+		return fmt.Errorf("failed to replace binary: %w", err)
+	}
+	_ = os.Remove(tmpPath)
+	return nil
 }
 
 func printUpdateStatus(latest, url string) {
